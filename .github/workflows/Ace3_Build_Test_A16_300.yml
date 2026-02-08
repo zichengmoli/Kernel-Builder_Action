@@ -25,16 +25,9 @@ jobs:
 
     - name: Download kernel source
       run: |
-        # 1. 下载一加的模块和设备树仓库 (作为基础容器)
-        # 注意：这里我们依然拉取官方的 ace_3 分支作为外壳
         git clone https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8550 -b oneplus/sm8550_b_16.0.0_ace_3 kernel_workspace --depth=1
-        
         cd $GITHUB_WORKSPACE/kernel_workspace
         cd kernel_platform
-        
-        # 2. 【关键】拉取你自己修改过的 common 内核源码！
-        # 仓库名：根据你的截图修正为 android_kernel_common_oneplus_sm8550
-        # 分支名：根据你的截图修正为 oneplus/sm8550_b_16.0.0_ace_3
         git clone https://github.com/${{ github.actor }}/android_kernel_common_oneplus_sm8550.git -b oneplus/sm8550_b_16.0.0_ace_3 common --depth=1
 
     - name: Download Clang-aosp
@@ -42,17 +35,15 @@ jobs:
         cd $GITHUB_WORKSPACE/kernel_workspace
         mkdir clang-aosp
         wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/master-kernel-build-2022/clang-r450784e.tar.gz
-        tar -C clang-aosp/ -zxvf clang-r450784e.tar.gz --strip-components=1
+        # 【修正】这里去掉了错误的参数
+        tar -C clang-aosp/ -zxvf clang-r450784e.tar.gz
 
     - name: Build kernel
       run: |
         cd $GITHUB_WORKSPACE/kernel_workspace
         KERNEL_DIR=./kernel_platform/common
         OUT_DIR=../../out
-        
-        # 【关键】修改配置文件，因为没有 vendor 目录，只用 gki_defconfig
         DEFCONFIG="gki_defconfig"
-        
         LTO=thin
         export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$PATH
         export CLANG_TRIPLE=aarch64-linux-gnu-
@@ -78,7 +69,6 @@ jobs:
         git clone https://github.com/Kernel-SU/AnyKernel3 --depth=1 AnyKernel3
         cp out/arch/arm64/boot/Image AnyKernel3/
         cd AnyKernel3
-        # 适配 Ace 3 的刷机脚本
         sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
         sed -i 's!block=/dev/block/platform/omap/omap_hsmmc.0/by-name/boot;!block=/dev/block/bootdevice/by-name/boot;!g' anykernel.sh
         sed -i 's/is_slot_device=0;/is_slot_device=1;/g' anykernel.sh
